@@ -9,4 +9,4 @@ set ts=4
 
 "colorscheme jellybeans
 
-map <F9> :w!<CR>:!python3 %<CR>
+map <F9> :w!<CR>:!clear<CR>:!python3 %<CR>
