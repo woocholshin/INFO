@@ -10,126 +10,100 @@ import modules.Node as node
 csv = pd.read_csv('./KOSPI.CSV')
 print(csv.KOSPI[0:8])
 
-#print(x)
 
-#print(csv.KOSPI, csv.ln_KOSPI)
-
-#print("[RMSE]", node.getRMSE(csv.KOSPI, csv.ln_KOSPI))
-
-#========================================================
-# test variables...csv.KOSPI[0] = 100.89333
-p = 5 
-q = 7
-l = m = n = p
-
-lr = 0.5
-
-"""
-e = np.array([0.1,0.2])
-target = np.array([5])
-
-total_input = np.concatenate((x, e))
-"""
-
-# ML
-W0, W1, W2, W3, W4 = node.initWeightMatrix(p, q, l, m, n)
-
-resultBuf = []
-
-for i in range(len(csv.KOSPI)-p-1):
-	#print("target")
-	#print("*************************************************************************************************")
-	target = np.array(csv.KOSPI[i:i+q])
-	x = csv.KOSPI[i+1:i+p+1]
-	#print("[MAIN target]\n", target)
-	#print("[MAIN x]\n",x)
-
-	o1, o2, o3, o4, e, total_input = node.partialFoward(x, target,  W0, W2, W3, W4)
-	#print("1.[MAIN total_input]", total_input)
-	"""
-	print("1.[MAIN e]", e)
-	print("1.[MAIN total_input]", total_input)
-	print("1.[MAIN o4]", o4)
-	print("1.[MAIN target]", target)
-	"""
-	#print("1.[MAIN total_input]", total_input)
-	W1, W2, W3, W4 = node.fullBackward(x, e, total_input, target, W1, W2, W3, W4, o1, o2, o3, o4, lr)
-	#print("2.[MAIN total_input]", total_input)
-
-	o1, o2, o3, o4, e, total_input = node.fullFoward(x, total_input, target, W1, W2, W3, W4)
-	#print("3.[MAIN total_input]", total_input)
-	W1, W2, W3, W4 = node.fullBackward(x, e, total_input, target, W1, W2, W3, W4, o1, o2, o3, o4, lr)
-
-	#print("[Error]", (target[0] - o4[0]))
-	resultBuf.append(target[0] - o4[0])
-
-print("[simulation result] : ", (target[0], o4[0]))
-print("\n[W1] : \n", W1)
-print("\n[W2] : \n", W2)
-print("\n[W3] : \n", W3)
-print("\n[W4] : \n", W4)
-
-# test variables...csv.KOSPI[0] = 100.89333
-p = 12 
+#**********************************************************************************************************
+# ARMA(p,q) based ML
+#**********************************************************************************************************
+# Hyper parameters...
+epoch = 3
+#----------------------------------------
+p = 1 
 q = 1
 l = m = n = p
 
 lr = 0.5
+#----------------------------------------
+DNN_p = 2
+DNN_l = DNN_m = DNN_n = DNN_p
 
-"""
-e = np.array([0.1,0.2])
-target = np.array([5])
+DNN_lr = 0.5
+#----------------------------------------
 
-total_input = np.concatenate((x, e))
-"""
 
-# ML
+# ARMA(p,q) based ML 
 W0, W1, W2, W3, W4 = node.initWeightMatrix(p, q, l, m, n)
 
-resultBuf2 = []
+resultBuf = []
 
-for i in range(len(csv.KOSPI)-p-1):
-	#print("target")
-	#print("*************************************************************************************************")
-	target = np.array(csv.KOSPI[i:i+q])
-	x = csv.KOSPI[i+1:i+p+1]
-	#print("[MAIN target]\n", target)
-	#print("[MAIN x]\n",x)
+cnt=0
+while cnt < epoch:
+	for i in range(len(csv.KOSPI)-p-1):
+		target = np.array(csv.KOSPI[i:i+q])
+		x = csv.KOSPI[i+1:i+p+1]
 
-	o1, o2, o3, o4, e, total_input = node.partialFoward(x, target,  W0, W2, W3, W4)
-	#print("1.[MAIN total_input]", total_input)
-	"""
-	print("1.[MAIN e]", e)
-	print("1.[MAIN total_input]", total_input)
-	print("1.[MAIN o4]", o4)
-	print("1.[MAIN target]", target)
-	"""
-	#print("1.[MAIN total_input]", total_input)
-	W1, W2, W3, W4 = node.fullBackward(x, e, total_input, target, W1, W2, W3, W4, o1, o2, o3, o4, lr)
-	#print("2.[MAIN total_input]", total_input)
+		o1, o2, o3, o4, e, total_input = node.partialFoward(x, target,  W0, W2, W3, W4)
+		W1, W2, W3, W4 = node.fullBackward(x, e, total_input, target, W1, W2, W3, W4, o1, o2, o3, o4, lr)
 
-	o1, o2, o3, o4, e, total_input = node.fullFoward(x, total_input, target, W1, W2, W3, W4)
-	#print("3.[MAIN total_input]", total_input)
-	W1, W2, W3, W4 = node.fullBackward(x, e, total_input, target, W1, W2, W3, W4, o1, o2, o3, o4, lr)
+		o1, o2, o3, o4, e, total_input = node.fullForward(x, total_input, target, W1, W2, W3, W4)
+		W1, W2, W3, W4 = node.fullBackward(x, e, total_input, target, W1, W2, W3, W4, o1, o2, o3, o4, lr)
 
-	#print("[Error]", (target[0] - o4[0]))
-	resultBuf2.append(target[0] - o4[0])
+		resultBuf.append(target[0] - o4[0])
+	
+	print("[ARMA-based DNN Epoch %d]" %(cnt))
+	cnt += 1
 
+print("[ARMA-based simulation result] : ", (target[0], o4[0]))
+"""
+print("\n[W1] : \n", W1)
+print("\n[W2] : \n", W2)
+print("\n[W3] : \n", W3)
+print("\n[W4] : \n", W4)
+"""
+
+#**********************************************************************************************************
+# general DNN-based ML
+#**********************************************************************************************************
+
+# general DNN 
+W1, W2, W3, W4 = node.DNNinitWeightMatrix(DNN_p, DNN_l, DNN_m, DNN_n)
+
+"""
+print("[W1]\n", W1, end="\n\n")
+print("[W2]\n", W2, end="\n\n")
+print("[W3]\n", W3, end="\n\n")
+print("[W4]\n", W4, end="\n\n")
+"""
+
+DNNresultBuf = []
+
+cnt=0
+while cnt < epoch:
+	for i in range(len(csv.KOSPI)-DNN_p-1):
+
+		target = np.array(csv.KOSPI[i])
+		x = csv.KOSPI[i+1:i+DNN_p+1]
+		x = np.array(x)
+
+		o1, o2, o3, o4 = node.DNNForward(x, target, W1, W2, W3, W4)
+
+		W1, W2, W3, W4 = node.DNNfullBackward(x, target, W1, W2, W3, W4, o1, o2, o3, o4, DNN_lr)
+
+		DNNresultBuf.append(target - o4)
+
+	cnt += 1
+	print("[basic DNN Epoch %d]" %(cnt))
+
+
+print("[DNN-based simulation result] : ", (target, o4[0]))
+
+# graph
 plt.plot(resultBuf, color="blue")
-plt.plot(resultBuf2, color="green")
+plt.plot(DNNresultBuf, color="red")
 plt.ylabel("[Fitting Error]")
 plt.xlabel("[Iteration]")
-plt.title('KOSPI AR(p) MA(q)')
-plt.legend(['(5,7)', '(12,1)'])
+plt.title('ARMA based DNN vs. basic DNN')
+plt.legend(['ARMA(' + str(p) + ',' + str(q) +') based DNN', 'Basic DNN with learning window ' + str(DNN_p)])
 
 plt.show()
 
-
-"""
-print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
-print("[2.TEST in progress...]\n")
-print(W1)
-print(W1_new)
-print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
-"""
 
