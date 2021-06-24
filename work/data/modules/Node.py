@@ -1,6 +1,9 @@
 import numpy as np
 from scipy.special import expit, logit
 
+# hyper-parameter for weight start
+INIT_WEIGHT = 2000
+
 # return partial
 def copyPartialMatrix(w1, p, l):
 	#print("[w1]", w1)
@@ -41,10 +44,11 @@ def prepareDelta(ifrom, prevW, ito, iout, lr, sigmoidFlag = True):
 		for i in range(len(ito)):
 			for j in range(len(ifrom)):
 				#delta[i,j] = -1 * lr * ito[i] * iout[i]*(1-iout[i]) * ifrom[j] 
-				# overflow here...
+				# overflow may occur here...
 				temp = -1 * lr * ito[i] * iout[i]*(1.0 - iout[i]) * ifrom[j]
 				#print("[DELTA]", temp)
 
+				# take only the direction from sigmoid directives...
 				if temp < 0:
 					temp = -lr
 				else:
@@ -52,6 +56,7 @@ def prepareDelta(ifrom, prevW, ito, iout, lr, sigmoidFlag = True):
 
 				delta[i,j] = temp 
 
+	# reLU
 	else:
 		for i in range(len(ito)):
 			for j in range(len(ifrom)):
@@ -61,50 +66,122 @@ def prepareDelta(ifrom, prevW, ito, iout, lr, sigmoidFlag = True):
 	#print("[delta]", delta)
 	return delta
 
+
+# prepare delta for weight adjustment
+# (previous output, weight matrix, next residuals, next output, learning rate)
+def DNNprepareDelta(ifrom, prevW, ito, iout, lr, sigmoidFlag = True):
+	delta = np.zeros([len(ito), len(ifrom)])
+
+	"""
+	print("============= DNNprepareDelta ================================")
+	print("[from]\n", ifrom[0], end="\n\n")
+	print("[W]\n", prevW, end="\n\n")
+	print("[residual]\n", ito, end="\n\n")
+	print("[next output]\n", iout, end="\n\n")
+	"""
+
+    # sigmoid(default)
+	if sigmoidFlag:
+		for i in range(len(ito)):
+			for j in range(len(ifrom)):
+				temp = -1 * lr * ito[i] * iout[i]*(1.0 - iout[i]) * ifrom[j]
+
+				# take only the direction from sigmoid directives...
+				if temp < 0:
+					temp = -lr
+				else:
+					temp = lr
+
+				delta[i,j] = temp 
+
+	# reLU
+	else:
+		for i in range(len(ito)):
+			for j in range(len(ifrom)):
+				delta[i,j] = -1 * (ito[i] * ifrom[j]) * lr
+	
+	return delta
+
+
 #init weight matrix
 def initWeightMatrix(p, q, l, m, n):
 
-	w1 = np.random.randn(l, p+q) + 2000
+	w1 = np.random.randn(l, p+q) + INIT_WEIGHT 
 	w0 = copyPartialMatrix(w1, p, l)
 
-	w2 = np.random.randn(m, l) + 2000
-	w3 = np.random.randn(n, m) + 2000
-	w4 = np.random.randn(q, n) + 2000
+	w2 = np.random.randn(m, l) + INIT_WEIGHT
+	w3 = np.random.randn(n, m) + INIT_WEIGHT
+	w4 = np.random.randn(q, n) + INIT_WEIGHT
 
 	return w0, w1, w2, w3, w4
 
-def fullFoward(x, total_input, target, w1, w2, w3, w4):
+
+#init weight matrix
+def DNNinitWeightMatrix(p, l, m, n):
+	w1 = np.random.randn(l, p) + INIT_WEIGHT 
+	w2 = np.random.randn(m, l) + INIT_WEIGHT
+	w3 = np.random.randn(n, m) + INIT_WEIGHT
+	w4 = np.random.randn(1, n) + INIT_WEIGHT  # single node for final output layer
+
+	return w1, w2, w3, w4
+
+
+# general DNN Forward propagation...one target variable(Xt), multiple input(Xt-1, Xt-2...)
+def DNNForward(x, target, w1, w2, w3, w4):
+	o1 = activate(np.dot(w1, x))
+	o2 = activate(np.dot(w2, o1))
+	o3 = activate(np.dot(w3, o2))
+	o4 = np.dot(w4, o3)
+
+	return o1, o2, o3, o4
+
+
+# DNN backward
+def DNNfullBackward(x, target, W1, W2, W3, W4, o1, o2, o3, o4, lr):
+	res = getResidual(target, o4)
+	W4_new = W4 + DNNprepareDelta(o3, W4, res, o4, lr)
+	o3_new = np.transpose(W4_new).dot(o4)
+
+	res = getResidual(o3, o3_new)
+	W3_new = W3 + DNNprepareDelta(o2, W3, res, o3, lr)
+	o2_new = np.transpose(W3_new).dot(o3)
+
+	res = getResidual(o2, o2_new)
+	W2_new = W2 + DNNprepareDelta(o1, W2, res, o2, lr)
+	o1_new = np.transpose(W2_new).dot(o2)
+
+	res = getResidual(o1, o1_new)
+	W1_new = W1 + DNNprepareDelta(x, W1, res, o1, lr)
+
+	return W1_new, W2_new, W3_new, W4_new
+
+
+# forward for ARMA(p, q)
+def fullForward(x, total_input, target, w1, w2, w3, w4):
 	o1 = activate(np.dot(w1, total_input))
 	o2 = activate(np.dot(w2, o1))
 	o3 = activate(np.dot(w3, o2))
 	#o4 = activate(np.dot(w4, o3))
 	o4 = np.dot(w4, o3)
 
-	e = np.array(getRMSE(o4, target))
+	e = np.array(getDiff(o4, target))
 	"""
 	print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
-	print("[fullFoward e]", e)
+	print("[fullForward e]", e)
 	print("o4",o4)
 	print("target", target)
 	print("=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=")
 	"""
 
-	return o1, o2, o3, o4, getRMSE(o4, target), np.concatenate((x,e))
+	return o1, o2, o3, o4, getDiff(o4, target), np.concatenate((x,e))
 
 
-# return RMSE
-def getRMSE(predicted, target):
-	"""
-	print("*************************************************")
-	print("[getRMSE target]")
-	#print(predicted, target)
-	"""
+# return difference
+def getDiff(predicted, target):
 	temp = []
 
 	for i in range(len(predicted)):
-		#temp.append(np.sqrt((predicted[i] - target[i])**2))
 		temp.append(predicted[i] - target[i])
-		#print("[getRMSE]", i, temp)
 	
 	return temp
 
@@ -118,7 +195,7 @@ def partialFoward(x, target, w1, w2, w3, w4):
 	#o4 = activate(np.dot(w4, o3))
 	o4 = np.dot(w4, o3)
 
-	e = np.array(getRMSE(o4, target))
+	e = np.array(getDiff(o4, target))
 	"""
 	print(o4)
 	print(target)
@@ -142,7 +219,7 @@ def partialFoward(x, target, w1, w2, w3, w4):
 
 
 # return residual
-def getresidual(target, out):
+def getResidual(target, out):
 	return np.subtract(target, out)
 
 # reLU or sigmoid(default)
@@ -162,14 +239,14 @@ def sigmoid(val):
 def fullBackward(x, e, y, target, W1, W2, W3, W4, o1, o2, o3, o4, lr):
 	# target, calculated
 	#print("==================================================")
-	res = getresidual(target, o4)
+	res = getResidual(target, o4)
 	# from(or previous output), weight, to(or next error), out(next), learning rate
 	W4_new = W4 + prepareDelta(o3, W4, res, o4, lr)
 	# new previous output based on new weght matrix
 	o3_new = np.transpose(W4_new).dot(o4)
 	#print("\n[fullBackward W4_new]", W4_new)
 
-	res = getresidual(o3, o3_new)
+	res = getResidual(o3, o3_new)
 	W3_new = W3 + prepareDelta(o2, W3, res, o3, lr)
 	o2_new = np.transpose(W3_new).dot(o3)
 	#print("\n[fullBackward W3_new]", W3_new)
@@ -178,12 +255,12 @@ def fullBackward(x, e, y, target, W1, W2, W3, W4, o1, o2, o3, o4, lr):
 	print(o2_new)
 	"""
 
-	res = getresidual(o2, o2_new)
+	res = getResidual(o2, o2_new)
 	W2_new = W2 + prepareDelta(o1, W2, res, o2, lr)
 	o1_new = np.transpose(W2_new).dot(o2)
 	#print("\n[fullBackward W2_new]", W2_new)
 
-	res = getresidual(o1, o1_new)
+	res = getResidual(o1, o1_new)
 	"""
 	print("[x]", x)
 	print("[e]", e)
