@@ -3,6 +3,8 @@ from scipy.special import expit, logit
 
 # hyper-parameter for weight start
 INIT_WEIGHT = 2000
+MU = 1000
+SIGMA = 500
 
 # return partial
 def copyPartialMatrix(w1, p, l):
@@ -15,6 +17,7 @@ def copyPartialMatrix(w1, p, l):
 	
 	#print(w0)
 	return w0
+
 
 # prepare delta for weight adjustment
 # (previous output, weight matrix, next residuals, next output, learning rate)
@@ -105,23 +108,23 @@ def DNNprepareDelta(ifrom, prevW, ito, iout, lr, sigmoidFlag = True):
 
 #init weight matrix
 def initWeightMatrix(p, q, l, m, n):
-
-	w1 = np.random.randn(l, p+q) + INIT_WEIGHT 
+	w1 = np.random.randn(l, p+q) + INIT_WEIGHT + np.random.normal(INIT_WEIGHT, SIGMA)
 	w0 = copyPartialMatrix(w1, p, l)
 
-	w2 = np.random.randn(m, l) + INIT_WEIGHT
-	w3 = np.random.randn(n, m) + INIT_WEIGHT
-	w4 = np.random.randn(q, n) + INIT_WEIGHT
+	w2 = np.random.randn(m, l) + INIT_WEIGHT + np.random.normal(INIT_WEIGHT, SIGMA)
+	w3 = np.random.randn(n, m) + INIT_WEIGHT + np.random.normal(INIT_WEIGHT, SIGMA)
+	w4 = np.random.randn(q, n) + INIT_WEIGHT + np.random.normal(INIT_WEIGHT, SIGMA)
 
 	return w0, w1, w2, w3, w4
 
 
 #init weight matrix
 def DNNinitWeightMatrix(p, l, m, n):
-	w1 = np.random.randn(l, p) + INIT_WEIGHT 
-	w2 = np.random.randn(m, l) + INIT_WEIGHT
-	w3 = np.random.randn(n, m) + INIT_WEIGHT
-	w4 = np.random.randn(1, n) + INIT_WEIGHT  # single node for final output layer
+	w1 = np.random.randn(l, p) + INIT_WEIGHT + np.random.normal(INIT_WEIGHT, SIGMA)
+	w2 = np.random.randn(m, l) + INIT_WEIGHT + np.random.normal(INIT_WEIGHT, SIGMA)
+	w3 = np.random.randn(n, m) + INIT_WEIGHT + np.random.normal(INIT_WEIGHT, SIGMA)
+	# single node for final output layer
+	w4 = np.random.randn(1, n) + INIT_WEIGHT + np.random.normal(INIT_WEIGHT, SIGMA)  
 
 	return w1, w2, w3, w4
 
@@ -134,6 +137,23 @@ def DNNForward(x, target, w1, w2, w3, w4):
 	o4 = np.dot(w4, o3)
 
 	return o1, o2, o3, o4
+
+# forecast...
+def DNNForecast(size, output, x, W1, W2, W3, W4):
+	# shifting...
+	tempBuf = []
+
+	tempBuf.append(output)
+	for i in range(size-1):
+		tempBuf.append(x[i])
+	
+	# forecasting
+	o1 = activate(np.dot(W1, tempBuf))
+	o2 = activate(np.dot(W2, o1))
+	o3 = activate(np.dot(W3, o2))
+	o4 = np.dot(W4, o3)
+
+	return o4, tempBuf
 
 
 # DNN backward
