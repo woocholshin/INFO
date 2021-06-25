@@ -15,16 +15,18 @@ print(csv.KOSPI[0:8])
 # ARMA(p,q) based ML
 #**********************************************************************************************************
 # Hyper parameters...
-epoch = 3
+EpochLimit = 1
 #----------------------------------------
 p = 1 
 q = 1
 l = m = n = p
+WINDOW_SIZE = p+1 # constraints : p > q
 
 lr = 0.5
 #----------------------------------------
 DNN_p = 2
 DNN_l = DNN_m = DNN_n = DNN_p
+DNN_WINDOW_SIZE = DNN_p+1
 
 DNN_lr = 0.5
 #----------------------------------------
@@ -36,10 +38,23 @@ W0, W1, W2, W3, W4 = node.initWeightMatrix(p, q, l, m, n)
 resultBuf = []
 
 cnt=0
-while cnt < epoch:
-	for i in range(len(csv.KOSPI)-p-1):
+while cnt < EpochLimit:
+	for i in range(len(csv.KOSPI) - WINDOW_SIZE -1):
+		buf = np.array(csv.KOSPI[i:i + WINDOW_SIZE])
+		revBuf = np.flip(buf)
+
+		target = np.array(revBuf[0:q])
+		x = revBuf[1:p+1]
+		"""
+		print("[rev. Buf]", revBuf)
+		print("[target]", target)
+		print("[x]", x)
+		"""
+
+		"""
 		target = np.array(csv.KOSPI[i:i+q])
 		x = csv.KOSPI[i+1:i+p+1]
+		"""
 
 		o1, o2, o3, o4, e, total_input = node.partialFoward(x, target,  W0, W2, W3, W4)
 		W1, W2, W3, W4 = node.fullBackward(x, e, total_input, target, W1, W2, W3, W4, o1, o2, o3, o4, lr)
@@ -47,10 +62,10 @@ while cnt < epoch:
 		o1, o2, o3, o4, e, total_input = node.fullForward(x, total_input, target, W1, W2, W3, W4)
 		W1, W2, W3, W4 = node.fullBackward(x, e, total_input, target, W1, W2, W3, W4, o1, o2, o3, o4, lr)
 
-		resultBuf.append(target[0] - o4[0])
-	
-	print("[ARMA-based DNN Epoch %d]" %(cnt))
+		resultBuf.append(target[0])
+
 	cnt += 1
+	print("[ARMA-based DNN Epoch %d]" %(cnt))
 
 print("[ARMA-based simulation result] : ", (target[0], o4[0]))
 """
@@ -77,32 +92,42 @@ print("[W4]\n", W4, end="\n\n")
 DNNresultBuf = []
 
 cnt=0
-while cnt < epoch:
-	for i in range(len(csv.KOSPI)-DNN_p-1):
+while cnt < EpochLimit:
+	for i in range(len(csv.KOSPI) - DNN_WINDOW_SIZE -1):
+		buf = np.array(csv.KOSPI[i:i + DNN_WINDOW_SIZE])
+		revBuf = np.flip(buf)
 
-		target = np.array(csv.KOSPI[i])
-		x = csv.KOSPI[i+1:i+DNN_p+1]
-		x = np.array(x)
+		x = revBuf[1:DNN_WINDOW_SIZE]
+		target = revBuf[0]
 
 		o1, o2, o3, o4 = node.DNNForward(x, target, W1, W2, W3, W4)
 
 		W1, W2, W3, W4 = node.DNNfullBackward(x, target, W1, W2, W3, W4, o1, o2, o3, o4, DNN_lr)
 
-		DNNresultBuf.append(target - o4)
+		DNNresultBuf.append(target)
 
 	cnt += 1
 	print("[basic DNN Epoch %d]" %(cnt))
 
-
 print("[DNN-based simulation result] : ", (target, o4[0]))
 
+DNNForecastBuf = []
+for k in range(52):
+	result, updatedX = node.DNNForecast((DNN_WINDOW_SIZE -1), target, x, W1, W2, W3, W4)
+	DNNForecastBuf.append(result)
+
 # graph
+plt.plot(csv.KOSPI, color="grey")
+"""
 plt.plot(resultBuf, color="blue")
-plt.plot(DNNresultBuf, color="red")
-plt.ylabel("[Fitting Error]")
+plt.plot(DNNresultBuf, color="green")
+plt.plot(DNNForecastBuf, color="red")
+"""
+
+plt.ylabel("[Fitting]")
 plt.xlabel("[Iteration]")
 plt.title('ARMA based DNN vs. basic DNN')
-plt.legend(['ARMA(' + str(p) + ',' + str(q) +') based DNN', 'Basic DNN with learning window ' + str(DNN_p)])
+#plt.legend(['KOSPI', 'ARMA(' + str(p) + ',' + str(q) +') based DNN', 'Basic DNN with learning window ' + str(DNN_p), 'DNN Forecast'])
 
 plt.show()
 
