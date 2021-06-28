@@ -140,30 +140,27 @@ def DNNForward(x, target, w1, w2, w3, w4):
 
 # forecast...
 def DNNForecast(size, output, x, W1, W2, W3, W4):
-	# shifting...
-
 	"""
 	print("\n[size]", size)
 	print("\n[output]", output)
 	print("\n[x]", x)
+	print("\n[shifted buf]\n", tempBuf)
 	"""
 
 	tempBuf = []
 
-	tempBuf.append(output)
-	for i in range(size-1):
-		tempBuf.append(x[i])
-	
-	#print("\n[shifted buf]\n", tempBuf)
 	# forecasting
-	o1 = activate(np.dot(W1, tempBuf))
+	o1 = activate(np.dot(W1, x))
 	o2 = activate(np.dot(W2, o1))
 	o3 = activate(np.dot(W3, o2))
 	o4 = np.dot(W4, o3)
 	
 	o4 = o4.item(0)
 
-	tempBuf[0] = o4
+	# shifting...
+	tempBuf.append(o4)
+	for i in range(size-1):
+		tempBuf.append(x[i])
 
 	"""
 	# update result
