@@ -24,15 +24,16 @@ WINDOW_SIZE = p+1 # constraints : p > q
 
 lr = 10
 #----------------------------------------
-DNN_p = 3
+DNN_p = 5
 DNN_l = DNN_m = DNN_n = DNN_p
 DNN_WINDOW_SIZE = DNN_p+1
 
-WEEKS_PER_YEAR = 52
+#WEEKS_PER_YEAR = 52
+WEEKS_PER_YEAR = 520
 DNN_START_FORECASTING = 0
 DNN_STOP_FORECASTING = 0
 
-DNN_lr = 3
+DNN_lr = 5
 #----------------------------------------
 
 
@@ -101,13 +102,6 @@ print("\n[W4] : \n", W4)
 # general DNN 
 W1, W2, W3, W4 = node.DNNinitWeightMatrix(DNN_p, DNN_l, DNN_m, DNN_n)
 
-"""
-print("[W1]\n", W1, end="\n\n")
-print("[W2]\n", W2, end="\n\n")
-print("[W3]\n", W3, end="\n\n")
-print("[W4]\n", W4, end="\n\n")
-"""
-
 DNN_STOP_FORECASTING  = EpochLimit*len(csv.KOSPI) - DNN_WINDOW_SIZE
 DNN_START_FORECASTING = DNN_STOP_FORECASTING - WEEKS_PER_YEAR
 
@@ -125,13 +119,30 @@ while cnt < EpochLimit:
 		o1, o2, o3, o4 = node.DNNForward(x, target, W1, W2, W3, W4)
 
 		W1, W2, W3, W4 = node.DNNfullBackward(x, target, W1, W2, W3, W4, o1, o2, o3, o4, DNN_lr)
+		"""
+		print("[W1]\n", W1, end="\n\n")
+		print("[W2]\n", W2, end="\n\n")
+		print("[W3]\n", W3, end="\n\n")
+		print("[W4]\n", W4, end="\n\n")
+		"""
 
 		# 2.forecasting
 		if ((cnt == (EpochLimit-1)) & (obsNo == DNN_START_FORECASTING)):
 			# start forecasting...
 			forecast_x = x
-			for k in range(WEEKS_PER_YEAR):
 
+			print("==========================")
+			print("[W1]\n",W1)
+			print("\n[W2]\n",W2)
+			print("\n[W3]\n",W3)
+			print("\n[W4]\n",W4)
+			print("==========================")
+			print("[Forecast initial input]", forecast_x)
+
+			#for k in range(WEEKS_PER_YEAR):
+			for k in range(2):
+
+				print("[Before Forecasted & input]", forecasted, forecast_x)
 				forecasted, forecast_x = node.DNNForecast((DNN_WINDOW_SIZE -1), o4, forecast_x, W1, W2, W3, W4)
 				DNNForecastBuf.append(forecasted)
 				print("[Forecasted & input]", forecasted, forecast_x)
@@ -148,7 +159,8 @@ while cnt < EpochLimit:
 
 	# end of Epoch iteration
 	cnt += 1
-	print("[basic DNN Epoch %d csv.KOSPI %d] " %(cnt, len(csv.KOSPI)))
+	#print("[basic DNN Epoch %d csv.KOSPI %d] " %(cnt, len(csv.KOSPI)))
+	print("[basic DNN Epoch %d] " %(cnt))
 
 
 """
@@ -180,10 +192,10 @@ fig.set_facecolor('white')
 plt.plot(DNNForecastBuf, color="green", linestyle='dotted', linewidth='0.9')
 plt.plot(targetBuf, color="lightgrey", linewidth='0.5')
 
-plt.axvline(DNN_START_FORECASTING, 0, 0.7, color='grey', linestyle=':', linewidth='1')
-plt.axvline(DNN_STOP_FORECASTING, 0, 0.7, color='grey', linestyle=':', linewidth='1')
+plt.axvline(DNN_START_FORECASTING, 0, 0.8, color='grey', linestyle=':', linewidth='1')
+plt.axvline(DNN_STOP_FORECASTING, 0, 0.8, color='grey', linestyle=':', linewidth='1')
 
-plt.annotate("[Forecast Interval] ", (DNN_START_FORECASTING*0.92, 3500))
+plt.annotate("[Forecast Interval] ", (DNN_STOP_FORECASTING*0.90, 600))
 #plt.annotate("[DNN Forecast STOP]", (DNN_STOP_FORECASTING*1.05, 3000))
 
 
@@ -198,5 +210,4 @@ plt.xlabel("[Iteration]")
 plt.title('ARMA based DNN vs. basic DNN')
 #plt.legend(['KOSPI', 'ARMA(' + str(p) + ',' + str(q) +') based DNN', 'Basic DNN with learning window ' + str(DNN_p), 'DNN Forecast'])
 
-plt.show()
-
+#plt.show()
