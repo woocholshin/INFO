@@ -2,9 +2,9 @@ import numpy as np
 from scipy.special import expit, logit
 
 # hyper-parameter for weight start
-INIT_WEIGHT = 1000
-MU = 1000
-SIGMA = 500
+INIT_WEIGHT = 10 
+MU = 100
+SIGMA = 50
 
 # return partial
 def copyPartialMatrix(w1, p, l):
@@ -120,11 +120,19 @@ def initWeightMatrix(p, q, l, m, n):
 
 #init weight matrix
 def DNNinitWeightMatrix(p, l, m, n):
-	w1 = np.random.randn(l, p) + INIT_WEIGHT + np.random.normal(INIT_WEIGHT, SIGMA)
-	w2 = np.random.randn(m, l) + INIT_WEIGHT + np.random.normal(INIT_WEIGHT, SIGMA)
-	w3 = np.random.randn(n, m) + INIT_WEIGHT + np.random.normal(INIT_WEIGHT, SIGMA)
+	w1 = np.round(np.random.randn(l, p), 1) + INIT_WEIGHT + np.round(np.random.normal(INIT_WEIGHT, SIGMA), 1)
+	w2 = np.round(np.random.randn(m, l), 1) + INIT_WEIGHT + np.round(np.random.normal(INIT_WEIGHT, SIGMA), 1)
+	w3 = np.round(np.random.randn(n, m), 1) + INIT_WEIGHT + np.round(np.random.normal(INIT_WEIGHT, SIGMA), 1)
+
 	# single node for final output layer
-	w4 = np.random.randn(1, n) + INIT_WEIGHT + np.random.normal(INIT_WEIGHT, SIGMA)  
+	w4 = np.round(np.random.randn(1, n), 1) + INIT_WEIGHT + np.round(np.random.normal(INIT_WEIGHT, SIGMA), 1)
+
+	print("-------------------------")
+	print("[init W1]\n",w1)
+	print("[init W2]\n",w2)
+	print("[init W3]\n",w3)
+	print("[init W4]\n",w4)
+	print("-------------------------")
 
 	return w1, w2, w3, w4
 
@@ -134,7 +142,7 @@ def DNNForward(x, target, w1, w2, w3, w4):
 	o1 = activate(np.dot(w1, x))
 	o2 = activate(np.dot(w2, o1))
 	o3 = activate(np.dot(w3, o2))
-	o4 = np.dot(w4, o3)
+	o4 = np.round(np.dot(w4, o3), 3)
 
 	return o1, o2, o3, o4
 
@@ -153,9 +161,16 @@ def DNNForecast(size, output, x, W1, W2, W3, W4):
 	o1 = activate(np.dot(W1, x))
 	o2 = activate(np.dot(W2, o1))
 	o3 = activate(np.dot(W3, o2))
-	o4 = np.dot(W4, o3)
+	o4 = np.round(np.dot(W4, o3), 3)
 	
 	o4 = o4.item(0)
+
+	"""
+	print("o1 : ", o1)
+	print("o2 : ", o2)
+	print("o3 : ", o3)
+	print("o4 : ", o4)
+	"""
 
 	# shifting...
 	tempBuf.append(o4)
@@ -263,7 +278,7 @@ def getResidual(target, out):
 # reLU or sigmoid(default)
 def activate(val, sigmoidFlag = True):
 	if sigmoidFlag:
-		return 1/(1 + expit(-val))
+		return np.round(1/(1 + expit(-val)), 3)
 	else:
 		return np.maximum(0, val)
 
