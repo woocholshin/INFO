@@ -2,9 +2,10 @@ import numpy as np
 from scipy.special import expit, logit
 
 # hyper-parameter for weight start
-INIT_WEIGHT = 10 
-MU = 100
+INIT_WEIGHT = 0 
+MU = 0
 SIGMA = 50
+AMPLIFIER = 0.00000001 # sigmoid input algle parameter (ax)
 
 # return partial
 def copyPartialMatrix(w1, p, l):
@@ -278,7 +279,7 @@ def getResidual(target, out):
 # reLU or sigmoid(default)
 def activate(val, sigmoidFlag = True):
 	if sigmoidFlag:
-		return np.round(1/(1 + expit(-val)), 3)
+		return np.round(1/(1 + expit(-val * AMPLIFIER)), 4)
 	else:
 		return np.maximum(0, val)
 
