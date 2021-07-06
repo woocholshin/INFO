@@ -5,7 +5,8 @@ from scipy.special import expit, logit
 INIT_WEIGHT = 0 
 MU = 0
 SIGMA = 50
-AMPLIFIER = 0.00000001 # sigmoid input algle parameter (ax)
+#AMPLIFIER = 0.00000001 # sigmoid input algle parameter (ax)
+AMPLIFIER = 0.0001 # tanh input algle parameter (ax)
 
 # return partial
 def copyPartialMatrix(w1, p, l):
@@ -88,7 +89,8 @@ def DNNprepareDelta(ifrom, prevW, ito, iout, lr, sigmoidFlag = True):
 	if sigmoidFlag:
 		for i in range(len(ito)):
 			for j in range(len(ifrom)):
-				temp = -1 * lr * ito[i] * iout[i]*(1.0 - iout[i]) * ifrom[j]
+				#temp = -1 * lr * ito[i] * iout[i]*(1.0 - iout[i]) * ifrom[j]
+				temp = -1 * lr * ito[i] * (1.0 + iout[i])*(1.0 - iout[i]) * ifrom[j]
 
 				# take only the direction from sigmoid directives...
 				if temp < 0:
@@ -140,30 +142,46 @@ def DNNinitWeightMatrix(p, l, m, n):
 
 # general DNN Forward propagation...one target variable(Xt), multiple input(Xt-1, Xt-2...)
 def DNNForward(x, target, w1, w2, w3, w4):
+	"""
 	o1 = activate(np.dot(w1, x))
 	o2 = activate(np.dot(w2, o1))
 	o3 = activate(np.dot(w3, o2))
+	o4 = np.round(np.dot(w4, o3), 3)
+	"""
+
+	o1 = activateTanh(np.dot(w1, x), False)
+	o2 = activateTanh(np.dot(w2, o1), False)
+	o3 = activateTanh(np.dot(w3, o2), False)
 	o4 = np.round(np.dot(w4, o3), 3)
 
 	return o1, o2, o3, o4
 
 # forecast...
-def DNNForecast(size, output, x, W1, W2, W3, W4):
+def DNNForecast(size, x, W1, W2, W3, W4):
 	"""
 	print("\n[size]", size)
 	print("\n[output]", output)
 	print("\n[x]", x)
 	print("\n[shifted buf]\n", tempBuf)
+	print("\n[x]", x)
+	print("\n[W1]\n", W1)
 	"""
 
 	tempBuf = []
 
 	# forecasting
+	"""
 	o1 = activate(np.dot(W1, x))
 	o2 = activate(np.dot(W2, o1))
 	o3 = activate(np.dot(W3, o2))
 	o4 = np.round(np.dot(W4, o3), 3)
+	"""
 	
+	o1 = activateTanh(np.dot(W1, x), False)
+	o2 = activateTanh(np.dot(W2, o1), False)
+	o3 = activateTanh(np.dot(W3, o2), False)
+	o4 = np.round(np.dot(W4, o3), 3)
+
 	o4 = o4.item(0)
 
 	"""
@@ -187,6 +205,8 @@ def DNNForecast(size, output, x, W1, W2, W3, W4):
 		finalBuf.append(tempBuf[j])
 
 	"""
+	#print("[tempBuf]", tempBuf)
+	#print("[o4]", o4)
 	return o4, tempBuf
 
 
@@ -282,6 +302,16 @@ def activate(val, sigmoidFlag = True):
 		return np.round(1/(1 + expit(-val * AMPLIFIER)), 4)
 	else:
 		return np.maximum(0, val)
+
+# tanh activate
+def activateTanh(val, diff=False):
+	if diff:  # return diff.
+		#return np.round((1 + np.tanh(val*AMPLIFIER))*(1 - np.tanh(val*AMPLIFIER)), 4)
+		return (1 + np.tanh(val*AMPLIFIER))*(1 - np.tanh(val*AMPLIFIER))
+	else:
+		#return (np.exp(val) - np.exp(-val))/(np.exp(val) + np.exp(-val))
+		#return np.round(np.tanh(val*AMPLIFIER), 4) 
+		return np.tanh(val*AMPLIFIER) 
 
 
 # sigmoid
