@@ -29,11 +29,11 @@ DNN_l = DNN_m = DNN_n = DNN_p
 DNN_WINDOW_SIZE = DNN_p+1
 
 WEEKS_PER_YEAR = 52
-#WEEKS_PER_YEAR = 520
+#WEEKS_PER_YEAR = 52
 DNN_START_FORECASTING = 0
 DNN_STOP_FORECASTING = 0
 
-DNN_lr = 5
+DNN_lr = 6
 #----------------------------------------
 
 
@@ -120,10 +120,8 @@ while cnt < EpochLimit:
 
 		W1, W2, W3, W4 = node.DNNfullBackward(x, target, W1, W2, W3, W4, o1, o2, o3, o4, DNN_lr)
 		"""
-		print("[W1]\n", W1, end="\n\n")
-		print("[W2]\n", W2, end="\n\n")
-		print("[W3]\n", W3, end="\n\n")
-		print("[W4]\n", W4, end="\n\n")
+		print("[x]\n", x, end="\n\n")
+		print("[target]\n", target, end="\n\n")
 		"""
 
 		# 2.forecasting
@@ -145,19 +143,17 @@ while cnt < EpochLimit:
 			#print("[Forecast initial input]", forecast_x)
 
 			for k in range(WEEKS_PER_YEAR):
-			#for k in range(2):
-
 				#print("[Before Forecasted & input]", forecasted, forecast_x)
-				forecasted, forecast_x = node.DNNForecast((DNN_WINDOW_SIZE -1), o4, forecast_x, W1, W2, W3, W4)
+				forecasted, forecast_x = node.DNNForecast((DNN_WINDOW_SIZE -1), forecast_x, W1, W2, W3, W4)
 				DNNForecastBuf.append(forecasted)
 				print("[Forecasted & input]", forecasted, forecast_x)
-
+				
 			break
 		else:
 			# usual one-step forecasting...
 			forecast_x = x
 
-			forecasted, forecast_x = node.DNNForecast((DNN_WINDOW_SIZE -1), o4, forecast_x, W1, W2, W3, W4)
+			forecasted, forecast_x = node.DNNForecast((DNN_WINDOW_SIZE -1), forecast_x, W1, W2, W3, W4)
 			DNNForecastBuf.append(forecasted)
 
 		obsNo +=1
@@ -197,8 +193,8 @@ fig.set_facecolor('white')
 plt.plot(DNNForecastBuf, color="green", linestyle='dotted', linewidth='0.9')
 plt.plot(targetBuf, color="lightgrey", linewidth='0.5')
 
-plt.axvline(DNN_START_FORECASTING, 0, 0.9, color='grey', linestyle=':', linewidth='1')
-plt.axvline(DNN_STOP_FORECASTING, 0, 0.9, color='grey', linestyle=':', linewidth='1')
+plt.axvline(DNN_START_FORECASTING, 0, 0.95, color='grey', linestyle=':', linewidth='1')
+plt.axvline(DNN_STOP_FORECASTING, 0, 0.95, color='grey', linestyle=':', linewidth='1')
 
 plt.annotate("[Forecast Interval] ", (DNN_STOP_FORECASTING*0.90, 600))
 #plt.annotate("[DNN Forecast STOP]", (DNN_STOP_FORECASTING*1.05, 3000))
