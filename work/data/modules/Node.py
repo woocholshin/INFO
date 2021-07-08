@@ -5,8 +5,9 @@ from scipy.special import expit, logit
 INIT_WEIGHT = 0 
 MU = 0
 SIGMA = 50
+THRESHOLD = 0.01
 #AMPLIFIER = 0.00000001 # sigmoid input algle parameter (ax)
-AMPLIFIER = 0.0001 # tanh input algle parameter (ax)
+AMPLIFIER = 0.00005 # tanh input algle parameter (ax)
 
 # return partial
 def copyPartialMatrix(w1, p, l):
@@ -89,15 +90,23 @@ def DNNprepareDelta(ifrom, prevW, ito, iout, lr, sigmoidFlag = True):
 	if sigmoidFlag:
 		for i in range(len(ito)):
 			for j in range(len(ifrom)):
-				#temp = -1 * lr * ito[i] * iout[i]*(1.0 - iout[i]) * ifrom[j]
-				temp = -1 * lr * ito[i] * (1.0 + iout[i])*(1.0 - iout[i]) * ifrom[j]
+				#temp = -1 * lr * ito[i] * iout[i]*(1.0 - iout[i]) * ifrom[j]             # sigmoid
+				#temp = -1 * lr * ito[i] * (1.0 + iout[i])*(1.0 - iout[i]) * ifrom[j]     # tanh
 
-				# take only the direction from sigmoid directives...
+				inv = inverseSoftplus(iout[i])
+				temp = -2 * lr * ito[i] * (expit(inv) / (expit(inv)+1)) * ifrom[j]      # softplus
+
+				# takes only the direction from sigmoid diff....
+				"""
 				if temp < 0:
 					temp = -lr
 				else:
 					temp = lr
 
+				delta[i,j] = temp 
+				"""
+				temp *= -lr
+				
 				delta[i,j] = temp 
 
 	# reLU
@@ -149,9 +158,16 @@ def DNNForward(x, target, w1, w2, w3, w4):
 	o4 = np.round(np.dot(w4, o3), 3)
 	"""
 
+	"""
 	o1 = activateTanh(np.dot(w1, x), False)
 	o2 = activateTanh(np.dot(w2, o1), False)
 	o3 = activateTanh(np.dot(w3, o2), False)
+	o4 = np.round(np.dot(w4, o3), 3)
+	"""
+
+	o1 = activateSoftplus(np.dot(w1, x), False)
+	o2 = activateSoftplus(np.dot(w2, o1), False)
+	o3 = activateSoftplus(np.dot(w3, o2), False)
 	o4 = np.round(np.dot(w4, o3), 3)
 
 	return o1, o2, o3, o4
@@ -177,9 +193,16 @@ def DNNForecast(size, x, W1, W2, W3, W4):
 	o4 = np.round(np.dot(W4, o3), 3)
 	"""
 	
+	"""
 	o1 = activateTanh(np.dot(W1, x), False)
 	o2 = activateTanh(np.dot(W2, o1), False)
 	o3 = activateTanh(np.dot(W3, o2), False)
+	o4 = np.round(np.dot(W4, o3), 3)
+	"""
+
+	o1 = activateSoftplus(np.dot(W1, x), False)
+	o2 = activateSoftplus(np.dot(W2, o1), False)
+	o3 = activateSoftplus(np.dot(W3, o2), False)
 	o4 = np.round(np.dot(W4, o3), 3)
 
 	o4 = o4.item(0)
@@ -313,6 +336,21 @@ def activateTanh(val, diff=False):
 		#return np.round(np.tanh(val*AMPLIFIER), 4) 
 		return np.tanh(val*AMPLIFIER) 
 
+
+# inverse of softplus function
+def inverseSoftplus(val):
+	temp = np.maximum((expit(val) - 1), THRESHOLD)
+	
+	return np.log(temp)
+
+
+# softplus - reLU like but smoother
+def activateSoftplus(val, diff=False):
+	if diff:
+		return sigmoid(val)
+	else:
+		return np.log(expit(val) + 1)
+	
 
 # sigmoid
 def sigmoid(val):
