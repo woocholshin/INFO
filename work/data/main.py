@@ -33,7 +33,7 @@ WEEKS_PER_YEAR = 52
 DNN_START_FORECASTING = 0
 DNN_STOP_FORECASTING = 0
 
-DNN_lr = 6
+DNN_lr = 5
 #----------------------------------------
 
 
